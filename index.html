@@ -1,0 +1,166 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, minimum-scale=1, maximum-scale=1">
+  <title>Pozos AR — A-Frame + AR.js</title>
+
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+
+  <!-- AR.js (GPS + Cámara) -->
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar-nft.min.js"></script>
+
+  <!-- GPS Component -->
+  <script src="https://unpkg.com/aframe-gps-entity-place@1.7.0/dist/aframe-gps-entity-place.min.js"></script>
+
+  <style>
+    body { margin:0; overflow:hidden; font-family: Arial, Helvetica, sans-serif; }
+    #info {
+      position: fixed;
+      left: 8px;
+      top: 8px;
+      background: rgba(255, 255, 255, 0.92);
+      padding: 10px;
+      border-radius: 6px;
+      z-index: 10;
+      max-width: 320px;
+      font-size: 14px;
+    }
+    button { margin-top: 6px; }
+  </style>
+</head>
+
+<body>
+
+<div id="info">
+  <strong>Pozos AR — Proyecto Demo</strong><br>
+  Permite Cámara + Ubicación.<br>
+  Cilindros azul-agua (2 m) con etiquetas flotantes.<br>
+  <button id="calBtn">Calibrar (simple)</button>
+</div>
+
+<a-scene
+  vr-mode-ui="enabled: false"
+  embedded
+  renderer="logarithmicDepthBuffer: true;"
+  arjs="sourceType: webcam; debugUIEnabled: false;"
+>
+  <a-camera gps-camera rotation-reader></a-camera>
+  <a-entity id="pozos-container"></a-entity>
+</a-scene>
+
+
+<script>
+/* CONFIGURACIÓN VISUAL */
+const POZO_COLOR = '#40E0D0';     // azul agua (turquoise)
+const POZO_HEIGHT = 2.0;          // 2 metros de alto
+const POZO_RADIUS = 0.30;         // cilindro ancho
+
+/* LISTA COMPLETA DE POZOS */
+const POZOS = [
+  { name: "POZO 1 — JORGE JIMÉNEZ CANTÚ", lat: 19.317364, lon: -98.848323 },
+  { name: "POZO 2 — SAN FRANCISCO", lat: 19.338547, lon: -98.866603 },
+  { name: "POZO 3 — SAN JOSÉ LA PALMA", lat: 19.321736, lon: -98.881706 },
+  { name: "POZO 4 — NUEVO MÉXICO", lat: 19.321361, lon: -98.885300 },
+  { name: "POZO 5 — ACUEDUCTO", lat: 19.322508, lon: -98.889406 },
+  { name: "POZO 6 — CHOCOLINES", lat: 19.325381, lon: -98.897678 },
+  { name: "POZO 7 — TEJOLOTE", lat: 19.317868, lon: -98.913981 },
+  { name: "POZO 8 — IZCALLI", lat: 19.318911, lon: -98.935976 },
+  { name: "POZO 9 — RANCHO DEL CARMEN", lat: 19.321100, lon: -98.939700 },
+  { name: "POZO 10 — JOSÉ DE LA MORA", lat: 19.307670, lon: -98.919730 },
+  { name: "POZO 11 — SANTA CRUZ TLAPACOYA", lat: 19.307840, lon: -98.907360 },
+  { name: "POZO 11A — SANTA CRUZ TLAPACOYA", lat: 19.306170, lon: -98.911340 },
+  { name: "POZO 12 — ALFREDO DEL MAZO", lat: 19.293260, lon: -98.908080 },
+  { name: "POZO 13 — JARAL", lat: 19.295020, lon: -98.886610 },
+  { name: "POZO 14 — SAN FRANCISCO ACUAUTLA", lat: 19.350740, lon: -98.852670 },
+  { name: "POZO 15 — SAN FRANCISCO ACUAUTLA", lat: 19.338840, lon: -98.856400 },
+  { name: "POZO 16 — TLALPIZAHUAC", lat: 19.334380, lon: -98.944660 },
+  { name: "POZO 17 — LOS HÉROES", lat: 19.325290, lon: -98.871560 },
+  { name: "POZO 18 — LOS HÉROES", lat: 19.332130, lon: -98.871070 },
+  { name: "POZO 19 — LOS HÉROES", lat: 19.328180, lon: -98.867500 },
+  { name: "POZO 20 — LOS HÉROES", lat: 19.328580, lon: -98.876860 },
+  { name: "POZO 21 — LOS HÉROES", lat: 19.323760, lon: -98.879960 },
+  { name: "POZO 22 — LOS HÉROES", lat: 19.331750, lon: -98.883800 },
+  { name: "POZO 23 — MELCHOR OCAMPO", lat: 19.319310, lon: -98.909050 },
+  { name: "POZO 24 — ARBOLADA", lat: 19.313680, lon: -98.898520 },
+  { name: "POZO 25 — SAN JACINTO", lat: 19.311150, lon: -98.888200 },
+  { name: "POZO 26 — LA ROSA DE SAN", lat: 19.341850, lon: -98.867320 },
+  { name: "POZO 27 — 4 VIENTOS", lat: 19.298480, lon: -98.846870 },
+  { name: "POZO 28 — 4 VIENTOS", lat: 19.296010, lon: -98.832610 },
+  { name: "POZO 29 — 4 VIENTOS", lat: 19.291410, lon: -98.835470 },
+  { name: "POZO 30 — SAN BUENAVENTURA", lat: 19.305250, lon: -98.866330 },
+  { name: "POZO 31 — SAN BUENAVENTURA", lat: 19.313200, lon: -98.859960 },
+  { name: "POZO 32 — SAN BUENAVENTURA", lat: 19.306030, lon: -98.857440 },
+  { name: "POZO 33 — SANTA BÁRBARA", lat: 19.309860, lon: -98.901120 },
+  { name: "POZO 34 — SANTA BÁRBARA", lat: 19.302500, lon: -98.898160 },
+  { name: "POZO 35 — SANTA BÁRBARA", lat: 19.296130, lon: -98.891490 },
+  { name: "POZO 36 — PALMAS 1", lat: 19.308550, lon: -98.894070 },
+  { name: "POZO 37 — JESÚS MARÍA", lat: 19.327260, lon: -98.883300 },
+  { name: "POZO 38 — LINDEROS", lat: 19.339210, lon: -98.859840 },
+  { name: "POZO 39 — LOMAS DE IXTAPALUCA", lat: 19.314930, lon: -98.910750 },
+  { name: "POZO 40 — AMPLIACIÓN SAN FRANCISCO", lat: 19.352870, lon: -98.850720 },
+  { name: "POZO 41 — TLALPIZAHUAC", lat: 19.329740, lon: -98.947190 },
+  { name: "POZO 42 — HORNOS DE SANTA BÁRBARA", lat: 19.318200, lon: -98.899200 },
+  { name: "POZO 43 — LA VIRGEN", lat: 19.303600, lon: -98.875120 },
+  { name: "POZO 44 — 6 DE JUNIO", lat: 19.325110, lon: -98.931950 },
+  { name: "POZO 45 — EL TEJOLOTE", lat: 19.322920, lon: -98.911140 },
+  { name: "POZO 46 — PALMAS 3", lat: 19.303420, lon: -98.888890 },
+  { name: "POZO 47 — 4 VIENTOS", lat: 19.294730, lon: -98.844050 },
+  { name: "POZO 48 — COATEPEC", lat: 19.370790, lon: -98.854530 },
+  { name: "POZO 49 — LA ROSA DE SAN", lat: 19.336070, lon: -98.872270 },
+  { name: "POZO 50 — 4 VIENTOS", lat: 19.289360, lon: -98.846190 },
+  { name: "POZO 51 — 1 ULTRA", lat: 19.321250, lon: -98.942056 },
+  { name: "POZO 52 — 3 ULTRA", lat: 19.321583, lon: -98.943389 },
+  { name: "POZO 53 — AYOTLA 3", lat: 19.317179, lon: -98.929185 }
+];
+
+
+/* CREA UN POZO EN 3D (cilindro + etiqueta) */
+function addPozo(lat, lon, name) {
+  const container = document.getElementById('pozos-container');
+
+  const wrapper = document.createElement('a-entity');
+  wrapper.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lon};`);
+  wrapper.setAttribute('look-at', '[gps-camera]');
+
+  const cyl = document.createElement('a-cylinder');
+  cyl.setAttribute('height', POZO_HEIGHT);
+  cyl.setAttribute('radius', POZO_RADIUS);
+  cyl.setAttribute('position', `0 ${POZO_HEIGHT / 2} 0`);
+  cyl.setAttribute('material', `color: ${POZO_COLOR}; metalness:0.2; roughness:0.6`);
+
+  const label = document.createElement('a-entity');
+  label.setAttribute('position', `0 ${POZO_HEIGHT + 0.6} 0`);
+  label.setAttribute('look-at', '[gps-camera]');
+
+  const text = document.createElement('a-text');
+  text.setAttribute('value', name);
+  text.setAttribute('color', '#ffffff');
+  text.setAttribute('align', 'center');
+  text.setAttribute('width', 6);
+
+  label.appendChild(text);
+  wrapper.appendChild(cyl);
+  wrapper.appendChild(label);
+
+  container.appendChild(wrapper);
+}
+
+/* INICIALIZACIÓN */
+window.addEventListener('load', () => {
+  POZOS.forEach(p => addPozo(p.lat, p.lon, p.name));
+
+  document.getElementById('calBtn').addEventListener('click', () => {
+    alert("La calibración fina (offset/rotación) se puede agregar cuando quieras.");
+  });
+});
+
+/* Mantener la cámara actualizada */
+AFRAME.registerComponent('rotation-reader', {
+  tick: function () {}
+});
+</script>
+
+</body>
+</html>
